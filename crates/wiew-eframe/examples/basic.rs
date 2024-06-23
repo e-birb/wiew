@@ -16,18 +16,18 @@ use nalgebra::Vector3;
 
 fn main() {
     let options = eframe::NativeOptions {
-        renderer: eframe::Renderer::Wgpu,
+        renderer: eframe::Renderer::Wgpu, // We need wgpu for 3D!
         ..Default::default()
     };
     
     eframe::run_native(
         "wiew ❤️ eframe",
         options,
-        Box::new(|cc| Box::new(Custom3d::new(cc).unwrap())),
+        Box::new(|cc| Box::new(App::new(cc).unwrap())),
     ).unwrap();
 }
 
-struct Custom3d {
+struct App {
     wiew: Eframe3dView,
     first_frame: Option<std::time::Instant>,
     frame_count: usize,
@@ -35,7 +35,7 @@ struct Custom3d {
     settings: Arc<Mutex<Settings>>,
 }
 
-impl Custom3d {
+impl App {
     pub fn new<'a>(cc: &'a eframe::CreationContext<'a>) -> Option<Self> {
         let wgpu_render_state = cc.wgpu_render_state.as_ref().expect("no wgpu_render_state, did you set eframe::Renderer::Wgpu?");
         let resources = EframeWiewManager::new(wgpu_render_state.target_format);
@@ -66,21 +66,26 @@ impl Custom3d {
     }
 }
 
-impl eframe::App for Custom3d {
+impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let now = std::time::Instant::now();
+        // compute fps
+        let (fps, avg_fps) = {
+            let now = std::time::Instant::now();
 
-        let fps = 1.0 / (now - self.last_frame).as_secs_f64();
-        self.last_frame = now;
-        ctx.request_repaint();
-        let avg_fps = self.first_frame.map(|first_frame| {
-            self.frame_count as f64 / (now - first_frame).as_secs_f64()
-        });
-        if self.first_frame.is_none() && self.frame_count > 100 {
-            self.first_frame = Some(now);
-            self.frame_count = 0;
-        }
-        self.frame_count += 1;
+            let fps = 1.0 / (now - self.last_frame).as_secs_f64();
+            self.last_frame = now;
+            ctx.request_repaint();
+            let avg_fps = self.first_frame.map(|first_frame| {
+                self.frame_count as f64 / (now - first_frame).as_secs_f64()
+            });
+            if self.first_frame.is_none() && self.frame_count > 100 {
+                self.first_frame = Some(now);
+                self.frame_count = 0;
+            }
+            self.frame_count += 1;
+
+            (fps, avg_fps)
+        };
 
         //egui::CentralPanel::default().show(ctx, |ui| {
         //    ui.label("Hello, world!");
@@ -88,7 +93,7 @@ impl eframe::App for Custom3d {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Average FPS: ");
-                ui.label(avg_fps.map(|f| format!("{f:.2}")).unwrap_or_default());
+                ui.label(avg_fps.map(|fps| format!("{fps:.2}")).unwrap_or_default());
                 ui.label("FPS: ");
                 ui.label(format!("{fps:.0}"));
             });
