@@ -1,6 +1,8 @@
 
 use std::{collections::HashMap, ops::Deref, sync::{Arc, Mutex}};
 
+pub use wiew;
+
 use wiew::*;
 use wiew::external::wgpu;
 use wiew::external::rotation3::*;
@@ -727,7 +729,7 @@ impl Grid {
 
 impl Render for Grid {
     fn render(
-        &mut self,
+        &self,
         cx: &mut RenderContext,
         pass: &mut Pass,
     ) {
