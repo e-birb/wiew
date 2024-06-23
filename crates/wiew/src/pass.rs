@@ -69,7 +69,7 @@ impl<'a> Pass<'a> {
     /// ```no_run
     /// # use wgpu::*;
     /// # use wiew::*;
-    /// # let mut pass = unreachable!();
+    /// # let mut pass: Pass = unreachable!();
     /// # let texture: () = unreachable!();
     /// pass.defer(
     ///     texture,
