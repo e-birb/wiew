@@ -1,0 +1,13 @@
+[package]
+name = "wiew"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck = { version = "1.16.1", features = ["derive"] }
+cgmath = "0.18.0"
+log = "0.4.21"
+nalgebra = "0.32.6"
+rotation3 = { version = "0.1.0", path = "../../../../../GitHub/rotation3" }
+type-map = "0.5.0"
+wgpu = "0.19"
