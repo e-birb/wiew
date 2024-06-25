@@ -3,12 +3,12 @@
 
 use std::sync::{Arc, Mutex};
 
-use eframe::egui::{self, Layout};
+use eframe::egui::{self, Color32, Layout};
 use eframe::wgpu::{CompareFunction, PrimitiveTopology};
 use wiew::instance::{Instance3d, Instance3dBuffer};
 use wiew::pipelines::flat::{self, FlatPipeline};
 use wiew::{Pass, Render, RenderContext, Resource, VertexBuffer};
-use wiew_eframe::{Eframe3dView, EframeWiewManager, Scene3d};
+use wiew_eframe::{Eframe3dView, EframeWiewManager, Scene3d, Scene3dBackground};
 use wiew::external::nalgebra;
 use wiew::external::rotation3::Rotation;
 
@@ -51,7 +51,16 @@ impl App {
 
         let settings = Arc::new(Mutex::new(Settings {
             grid: true,
+            bg_top_left: Color32::from_rgba_premultiplied(14, 41, 29, 255),
+            bg_tot_right: Color32::from_rgba_premultiplied(54, 22, 22, 255),
+            bg_bottom_left: Color32::from_rgba_premultiplied(20, 17, 51, 255),
+            bg_bottom_right: Color32::from_rgba_premultiplied(42, 20, 55, 255),
         }));
+
+        /*
+        6, 38, 24, 255                74, 0, 0, 255
+        10, 0, 67, 255                97, 33, 127, 255
+        */
 
         let wiew = Eframe3dView::new(MyScene::new(settings.clone()));
 
@@ -97,6 +106,16 @@ impl eframe::App for App {
                 ui.label("FPS: ");
                 ui.label(format!("{fps:.0}"));
             });
+            ui.horizontal(|ui| {
+                let mut settings = self.settings.lock().unwrap();
+                ui.color_edit_button_srgba(&mut settings.bg_top_left);
+                ui.color_edit_button_srgba(&mut settings.bg_tot_right);
+            });
+            ui.horizontal(|ui| {
+                let mut settings = self.settings.lock().unwrap();
+                ui.color_edit_button_srgba(&mut settings.bg_bottom_left);
+                ui.color_edit_button_srgba(&mut settings.bg_bottom_right);
+            });
             ui.checkbox(&mut self.settings.lock().unwrap().grid, "grid");
             ui.with_layout(Layout::centered_and_justified(egui::Direction::TopDown), |ui| {
             //ui.with_layout(Layout::top_down_justified(egui::Align::Center), |ui| {
@@ -110,6 +129,10 @@ impl eframe::App for App {
 
 struct Settings {
     grid: bool,
+    bg_top_left: egui::Color32,
+    bg_tot_right: egui::Color32,
+    bg_bottom_left: egui::Color32,
+    bg_bottom_right: egui::Color32,
 }
 
 struct MyScene {
@@ -138,6 +161,17 @@ impl Scene3d for MyScene {
 
     fn grid(&self) -> bool {
         self.settings.lock().unwrap().grid
+    }
+
+    fn background_color(&self) -> wiew_eframe::Scene3dBackground {
+        let settings = self.settings.lock().unwrap();
+        let to_array = |c: Color32| [c.r() as f32 / 255.0, c.g() as f32 / 255.0, c.b() as f32 / 255.0, c.a() as f32 / 255.0];
+        Scene3dBackground {
+            top_left: to_array(settings.bg_top_left),
+            top_right: to_array(settings.bg_tot_right),
+            bottom_left: to_array(settings.bg_bottom_left),
+            bottom_right: to_array(settings.bg_bottom_right),
+        }
     }
 }
 

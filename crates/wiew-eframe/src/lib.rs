@@ -8,7 +8,7 @@ use wiew::external::wgpu;
 use wiew::external::rotation3::*;
 use wiew::pipelines::flat::{self, FlatIdentityPipeline, FlatPipeline};
 
-use eframe::{egui::{PointerButton, Sense}, egui_wgpu::{CallbackTrait, RenderState, ScreenDescriptor}};
+use eframe::{egui::{PointerButton, Sense}, egui_wgpu::{CallbackTrait, RenderState, ScreenDescriptor}, wgpu::{util::DeviceExt, Buffer}};
 use wgpu::{ColorTargetState, PrimitiveTopology, TextureFormat};
 
 use crate::{instance::Instance3d, Pass, ProjectionCameraBuffer, RenderContext, Resource, ResourceRegistry, SurfaceInfo, Trackball, TrackballCamera, VertexBuffer, View};
@@ -461,7 +461,12 @@ pub struct Scene3dBackground {
 }
 
 impl Scene3dBackground {
-    pub fn transparent() -> Self {
+    pub const DEFAULT_BG: Self = Self::vertical_gradient(
+        [0x1c as f32 / 255.0, 0x1c as f32 / 255.0, 0x1c as f32 / 255.0, 1.0],
+        [0x26 as f32 / 255.0, 0x19 as f32 / 255.0, 0x38 as f32 / 255.0, 1.0],
+    );
+
+    pub const fn transparent() -> Self {
         Self {
             top_left: [0.0, 0.0, 0.0, 0.0],
             top_right: [0.0, 0.0, 0.0, 0.0],
@@ -470,7 +475,7 @@ impl Scene3dBackground {
         }
     }
 
-    pub fn uniform_color(color: [f32; 4]) -> Self {
+    pub const fn uniform_color(color: [f32; 4]) -> Self {
         Self {
             top_left: color,
             top_right: color,
@@ -479,7 +484,7 @@ impl Scene3dBackground {
         }
     }
 
-    pub fn horizontal_gradient(left: [f32; 4], right: [f32; 4]) -> Self {
+    pub const fn horizontal_gradient(left: [f32; 4], right: [f32; 4]) -> Self {
         Self {
             top_left: left,
             top_right: right,
@@ -488,7 +493,7 @@ impl Scene3dBackground {
         }
     }
 
-    pub fn vertical_gradient(top: [f32; 4], bottom: [f32; 4]) -> Self {
+    pub const fn vertical_gradient(top: [f32; 4], bottom: [f32; 4]) -> Self {
         Self {
             top_left: top,
             top_right: top,
@@ -497,18 +502,30 @@ impl Scene3dBackground {
         }
     }
 
-    fn vertices(&self) -> [flat::Vertex; 4] {
+    fn vertices(&self) -> [flat::Vertex; 5] {
         [
             flat::Vertex { position: [-1.0, -1.0, 0.0], color: self.bottom_left },
-            flat::Vertex { position: [-1.0, 1.0, 0.0], color: self.top_left },
             flat::Vertex { position: [1.0, -1.0, 0.0], color: self.bottom_right },
             flat::Vertex { position: [1.0, 1.0, 0.0], color: self.top_right },
+            flat::Vertex { position: [-1.0, 1.0, 0.0], color: self.top_left },
+
+            // central: average
+            flat::Vertex {
+                position: [0.0, 0.0, 0.0],
+                color: [
+                    (self.top_left[0] + self.top_right[0] + self.bottom_left[0] + self.bottom_right[0]) / 4.0,
+                    (self.top_left[1] + self.top_right[1] + self.bottom_left[1] + self.bottom_right[1]) / 4.0,
+                    (self.top_left[2] + self.top_right[2] + self.bottom_left[2] + self.bottom_right[2]) / 4.0,
+                    (self.top_left[3] + self.top_right[3] + self.bottom_left[3] + self.bottom_right[3]) / 4.0,
+                ],
+            },
         ]
     }
 }
 
 struct Bg {
     bg_vb: Resource<VertexBuffer<flat::Vertex>>,
+    bg_ib: Resource<Buffer>,
     bg_instance: Resource<VertexBuffer<Instance3d>>,
     bg_pipeline: FlatIdentityPipeline,
 }
@@ -528,11 +545,27 @@ impl Bg {
         ));
 
         let bg_pipeline = FlatIdentityPipeline::new(
-            PrimitiveTopology::TriangleStrip,
+            PrimitiveTopology::TriangleList,
         );
+
+        const INDICES: &[u16] = &[
+            0, 1, 4,
+            1, 2, 4,
+            2, 3, 4,
+            3, 0, 4,
+        ];
+
+        let bg_ib = Resource::new(|cx: &mut RenderContext| {
+            cx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("bg index buffer"),
+                contents: wiew::external::bytemuck::cast_slice(INDICES),
+                usage: wgpu::BufferUsages::INDEX,
+            })
+        });
 
         Self {
             bg_vb,
+            bg_ib,
             bg_instance,
             bg_pipeline,
         }
@@ -546,6 +579,7 @@ impl Bg {
     ) {
         let bg_vb = cx.resource(&self.bg_vb);
         let bg_instance = cx.resource(&self.bg_instance);
+        let bg_ib = cx.resource(&self.bg_ib);
 
         bg_vb.update_from_slice(cx.queue, &background.vertices());
 
@@ -554,6 +588,7 @@ impl Bg {
             pass,
             bg_vb.slice(..),
             bg_instance.slice(..),
+            Some(bg_ib),
         );
     }
 }
@@ -566,10 +601,7 @@ pub trait Scene3d: 'static + Send + Sync {
     );
 
     fn background_color(&self) -> Scene3dBackground {
-        Scene3dBackground::vertical_gradient(
-            [0x1c as f32 / 255.0, 0x1c as f32 / 255.0, 0x1c as f32 / 255.0, 1.0],
-            [0x26 as f32 / 255.0, 0x19 as f32 / 255.0, 0x38 as f32 / 255.0, 1.0],
-        )
+        Scene3dBackground::DEFAULT_BG
     }
 
     fn grid(&self) -> bool {

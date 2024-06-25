@@ -1,4 +1,6 @@
 
+use std::sync::Arc;
+
 use wgpu::{CompareFunction, Device, PrimitiveState, PrimitiveTopology, ShaderModule};
 
 use crate::{decl_vertex_raw_repr, instance::Instance3d, Pass, ProjectionCameraCommon, RenderContext, SingletonResource, VertexBufferSlice, VertexRawRepr};
@@ -221,17 +223,23 @@ impl FlatIdentityPipeline {
         pass: &mut Pass<'a>,
         vertices: impl Into<VertexBufferSlice<Vertex>>,
         instances: impl Into<VertexBufferSlice<Instance3d>>,
+        index_buffer: Option<Arc<wgpu::Buffer>>,
     ) {
         let vertices: VertexBufferSlice<Vertex> = vertices.into();
         let instances: VertexBufferSlice<Instance3d> = instances.into();
 
         let pipeline = self.pipeline.get(cx, pass);
 
-        pass.defer((pipeline, vertices, instances), move |rp, _, (pipeline, vertices, instances)| {
+        pass.defer((pipeline, vertices, instances, index_buffer), move |rp, _, (pipeline, vertices, instances, index_buffer)| {
             rp.set_pipeline(&pipeline);
             rp.set_vertex_buffer(0, vertices.buffer.slice(..)); // TODO ??? we are doing something redundant
             rp.set_vertex_buffer(1, instances.buffer.slice(..));
-            rp.draw(vertices.range.clone(), instances.range.clone());
+            if let Some(index_buffer) = &index_buffer {
+                rp.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                rp.draw_indexed(0..index_buffer.size() as u32 / 2, 0, 0..instances.range.end as u32);
+            } else {
+                rp.draw(vertices.range.clone(), instances.range.clone());
+            }
         });
     }
 }

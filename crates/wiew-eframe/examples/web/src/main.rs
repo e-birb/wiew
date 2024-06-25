@@ -1,4 +1,5 @@
 use std::ops::Deref;
+use std::sync::{Arc, Mutex};
 
 use eframe::egui::{self, Color32, Pos2, Stroke};
 use eframe::egui::Layout;
@@ -10,7 +11,7 @@ use wiew_eframe::wiew::instance::Instance3d;
 use wiew_eframe::wiew::{Pass, Render, Resource};
 use wiew_eframe::wiew::{instance::Instance3dBuffer, pipelines::flat::FlatPipeline, RenderContext, VertexBuffer};
 use wiew_eframe::wiew::pipelines::flat;
-use wiew_eframe::{Eframe3dView, EframeWiewManager, Scene3d};
+use wiew_eframe::{Eframe3dView, EframeWiewManager, Scene3d, Scene3dBackground};
 
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -57,16 +58,14 @@ fn main() {
 
 struct App {
     wiew: Eframe3dView,
+    settings: Arc<Mutex<Settings>>,
 }
 
 impl App {
     pub fn new<'a>(cc: &'a eframe::CreationContext<'a>) -> Option<Self> {
-        //let gl = cc.gl.is_some();
-        //log::info!("gl: {}", gl);
-
         let wgpu_render_state = cc.wgpu_render_state.as_ref().expect("no wgpu_render_state, did you set eframe::Renderer::Wgpu?");
         let resources = EframeWiewManager::new(wgpu_render_state.target_format);
-//
+
         // Because the graphics pipeline must have the same lifetime as the egui render pass,
         // instead of storing the pipeline in our `Custom3D` struct, we insert it into the
         // `paint_callback_resources` type map, which is stored alongside the render pass.
@@ -75,62 +74,71 @@ impl App {
             .write()
             .callback_resources
             .insert(resources);
-//
-        let wiew = Eframe3dView::new(MyScene::new());
+
+        let settings = Arc::new(Mutex::new(Settings {
+            grid: true,
+            bg_top_left: Color32::from_rgba_premultiplied(14, 41, 29, 255),
+            bg_tot_right: Color32::from_rgba_premultiplied(54, 22, 22, 255),
+            bg_bottom_left: Color32::from_rgba_premultiplied(20, 17, 51, 255),
+            bg_bottom_right: Color32::from_rgba_premultiplied(42, 20, 55, 255),
+        }));
+
+        /*
+        6, 38, 24, 255                74, 0, 0, 255
+        10, 0, 67, 255                97, 33, 127, 255
+        */
+
+        let wiew = Eframe3dView::new(MyScene::new(settings.clone()));
 
         Some(Self {
+            //scene,
             wiew,
+            settings,
         })
     }
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        ctx.style_mut(|style| {
-            // set font size
-            //for (text_style, font_id) in style.text_styles.iter_mut() {
-            //    log::info!("text_style: {text_style:?}font_id: {:?}", font_id);
-            //    font_id.size = 24.0; // whatever size you want here
-            //}
-        });
-
-        //log::info!("update");
-        //let a: &eframe::glow::Context = _frame.gl().unwrap().deref();
-        let s = _frame.wgpu_render_state().unwrap();
-        // device name
-        let device_name = s.adapter.get_info().name;
-        log::info!("device_name: {:?}", device_name);
-
-        eframe::egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Hello, world!");
-            ui.label("Hello from eframe!");
-            ui.separator();
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                let mut settings = self.settings.lock().unwrap();
+                ui.color_edit_button_srgba(&mut settings.bg_top_left);
+                ui.color_edit_button_srgba(&mut settings.bg_tot_right);
+            });
+            ui.horizontal(|ui| {
+                let mut settings = self.settings.lock().unwrap();
+                ui.color_edit_button_srgba(&mut settings.bg_bottom_left);
+                ui.color_edit_button_srgba(&mut settings.bg_bottom_right);
+            });
+            ui.checkbox(&mut self.settings.lock().unwrap().grid, "grid");
             ui.with_layout(Layout::centered_and_justified(egui::Direction::TopDown), |ui| {
-                //ui.with_layout(Layout::top_down_justified(egui::Align::Center), |ui| {
+            //ui.with_layout(Layout::top_down_justified(egui::Align::Center), |ui| {
                 egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                    //let p = ui.painter();
-                    //p.line_segment([Pos2 { x: 0.0, y: 0.0 }, Pos2 { x: 100.0, y: 100.0 }], Stroke {
-                    //    width: 1.0,
-                    //    color: Color32::WHITE,
-                    //});
-                    //let mut value = 3.0;
-                    //ui.add(egui::Slider::new(&mut value, 0.0..=10.0).text("value"));
                     self.wiew.paint(ui);
-                    //ui.label("a");
                 });
             });
-            //log::info!("Hello from eframe!");
         });
     }
 }
 
+struct Settings {
+    grid: bool,
+    bg_top_left: egui::Color32,
+    bg_tot_right: egui::Color32,
+    bg_bottom_left: egui::Color32,
+    bg_bottom_right: egui::Color32,
+}
+
 struct MyScene {
+    settings: Arc<Mutex<Settings>>,
     triangle: Resource<MyShape>,
 }
 
 impl MyScene {
-    fn new() -> Self {
+    fn new(settings: Arc<Mutex<Settings>>) -> Self {
         Self {
+            settings,
             triangle: Resource::new(MyShape::new),
         }
     }
@@ -144,6 +152,21 @@ impl Scene3d for MyScene {
     ) {
         let triangle = cx.resource(&self.triangle);
         triangle.render(cx, pass);
+    }
+
+    fn grid(&self) -> bool {
+        self.settings.lock().unwrap().grid
+    }
+
+    fn background_color(&self) -> wiew_eframe::Scene3dBackground {
+        let settings = self.settings.lock().unwrap();
+        let to_array = |c: Color32| [c.r() as f32 / 255.0, c.g() as f32 / 255.0, c.b() as f32 / 255.0, c.a() as f32 / 255.0];
+        Scene3dBackground {
+            top_left: to_array(settings.bg_top_left),
+            top_right: to_array(settings.bg_tot_right),
+            bottom_left: to_array(settings.bg_bottom_left),
+            bottom_right: to_array(settings.bg_bottom_right),
+        }
     }
 }
 
