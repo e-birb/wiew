@@ -1,45 +1,72 @@
+use std::ops::Deref;
 
-//#![windows_subsystem = "windows"]
-
-use std::sync::{Arc, Mutex};
-
-use eframe::egui::{self, Layout};
+use eframe::egui::{self, Color32, Pos2, Stroke};
+use eframe::egui::Layout;
 use eframe::wgpu::{CompareFunction, PrimitiveTopology};
-use wiew::instance::{Instance3d, Instance3dBuffer};
-use wiew::pipelines::flat::{self, FlatPipeline};
-use wiew::{Pass, Render, RenderContext, Resource, VertexBuffer};
+use wiew_eframe::wiew::external::wgpu;
+use wiew_eframe::wiew::external::nalgebra::Vector3;
+use wiew_eframe::wiew::external::rotation3::Rotation;
+use wiew_eframe::wiew::instance::Instance3d;
+use wiew_eframe::wiew::{Pass, Render, Resource};
+use wiew_eframe::wiew::{instance::Instance3dBuffer, pipelines::flat::FlatPipeline, RenderContext, VertexBuffer};
+use wiew_eframe::wiew::pipelines::flat;
 use wiew_eframe::{Eframe3dView, EframeWiewManager, Scene3d};
-use wiew::external::nalgebra;
-use wiew::external::rotation3::Rotation;
 
-use nalgebra::Vector3;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    let options = eframe::NativeOptions {
-        renderer: eframe::Renderer::Wgpu, // We need wgpu for 3D!
-        ..Default::default()
-    };
-    
+    println!("Hello, world!");
+
+    #[cfg(not(target_arch = "wasm32"))]
     eframe::run_native(
-        "wiew ❤️ eframe",
-        options,
+        "Wiew",
+        Default::default(),
         Box::new(|cc| Box::new(App::new(cc).unwrap())),
     ).unwrap();
 }
 
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    // Redirect `log` message to `console.log` and friends:
+    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+
+    web_sys::console::log_1(&"Hello using web-sys".into());
+
+    let mut web_options = eframe::WebOptions::default();
+    web_options.wgpu_options = egui_wgpu::WgpuConfiguration {
+        supported_backends: wgpu::Backends::GL | wgpu::Backends::BROWSER_WEBGPU,
+        //supported_backends: wgpu::Backends::GL,
+        //device_descriptor: std::sync::Arc::new(|adapter| {
+        //    Default::default()
+        //}),
+        ..Default::default()
+    };
+    web_options.depth_buffer = 0;
+
+    wasm_bindgen_futures::spawn_local(async {
+        eframe::WebRunner::new()
+            .start(
+                "my-canvas", // hardcode it
+                web_options,
+                Box::new(|cc| Box::new(App::new(cc).unwrap())),
+            )
+            .await
+            .expect("failed to start eframe");
+    });
+}
+
 struct App {
     wiew: Eframe3dView,
-    first_frame: Option<std::time::Instant>,
-    frame_count: usize,
-    last_frame: std::time::Instant,
-    settings: Arc<Mutex<Settings>>,
 }
 
 impl App {
     pub fn new<'a>(cc: &'a eframe::CreationContext<'a>) -> Option<Self> {
+        //let gl = cc.gl.is_some();
+        //log::info!("gl: {}", gl);
+
         let wgpu_render_state = cc.wgpu_render_state.as_ref().expect("no wgpu_render_state, did you set eframe::Renderer::Wgpu?");
         let resources = EframeWiewManager::new(wgpu_render_state.target_format);
-
+//
         // Because the graphics pipeline must have the same lifetime as the egui render pass,
         // instead of storing the pipeline in our `Custom3D` struct, we insert it into the
         // `paint_callback_resources` type map, which is stored alongside the render pass.
@@ -48,79 +75,62 @@ impl App {
             .write()
             .callback_resources
             .insert(resources);
-
-        let settings = Arc::new(Mutex::new(Settings {
-            grid: true,
-        }));
-
-        let wiew = Eframe3dView::new(MyScene::new(settings.clone()));
+//
+        let wiew = Eframe3dView::new(MyScene::new());
 
         Some(Self {
-            //scene,
             wiew,
-            first_frame: None,
-            frame_count: 0,
-            last_frame: std::time::Instant::now(),
-            settings,
         })
     }
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // compute fps
-        let (fps, avg_fps) = {
-            let now = std::time::Instant::now();
+    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        ctx.style_mut(|style| {
+            // set font size
+            //for (text_style, font_id) in style.text_styles.iter_mut() {
+            //    log::info!("text_style: {text_style:?}font_id: {:?}", font_id);
+            //    font_id.size = 24.0; // whatever size you want here
+            //}
+        });
 
-            let fps = 1.0 / (now - self.last_frame).as_secs_f64();
-            self.last_frame = now;
-            ctx.request_repaint();
-            let avg_fps = self.first_frame.map(|first_frame| {
-                self.frame_count as f64 / (now - first_frame).as_secs_f64()
-            });
-            if self.first_frame.is_none() && self.frame_count > 100 {
-                self.first_frame = Some(now);
-                self.frame_count = 0;
-            }
-            self.frame_count += 1;
+        //log::info!("update");
+        //let a: &eframe::glow::Context = _frame.gl().unwrap().deref();
+        let s = _frame.wgpu_render_state().unwrap();
+        // device name
+        let device_name = s.adapter.get_info().name;
+        log::info!("device_name: {:?}", device_name);
 
-            (fps, avg_fps)
-        };
-
-        //egui::CentralPanel::default().show(ctx, |ui| {
-        //    ui.label("Hello, world!");
-        //});
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label("Average FPS: ");
-                ui.label(avg_fps.map(|fps| format!("{fps:.2}")).unwrap_or_default());
-                ui.label("FPS: ");
-                ui.label(format!("{fps:.0}"));
-            });
-            ui.checkbox(&mut self.settings.lock().unwrap().grid, "grid");
+        eframe::egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("Hello, world!");
+            ui.label("Hello from eframe!");
+            ui.separator();
             ui.with_layout(Layout::centered_and_justified(egui::Direction::TopDown), |ui| {
-            //ui.with_layout(Layout::top_down_justified(egui::Align::Center), |ui| {
+                //ui.with_layout(Layout::top_down_justified(egui::Align::Center), |ui| {
                 egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                    //let p = ui.painter();
+                    //p.line_segment([Pos2 { x: 0.0, y: 0.0 }, Pos2 { x: 100.0, y: 100.0 }], Stroke {
+                    //    width: 1.0,
+                    //    color: Color32::WHITE,
+                    //});
+                    //let mut value = 3.0;
+                    //ui.add(egui::Slider::new(&mut value, 0.0..=10.0).text("value"));
                     self.wiew.paint(ui);
+                    //ui.label("a");
                 });
             });
+            //log::info!("Hello from eframe!");
         });
     }
 }
 
-struct Settings {
-    grid: bool,
-}
-
 struct MyScene {
-    settings: Arc<Mutex<Settings>>,
     triangle: Resource<MyShape>,
 }
 
 impl MyScene {
-    fn new(settings: Arc<Mutex<Settings>>) -> Self {
+    fn new() -> Self {
         Self {
-            settings,
             triangle: Resource::new(MyShape::new),
         }
     }
@@ -134,10 +144,6 @@ impl Scene3d for MyScene {
     ) {
         let triangle = cx.resource(&self.triangle);
         triangle.render(cx, pass);
-    }
-
-    fn grid(&self) -> bool {
-        self.settings.lock().unwrap().grid
     }
 }
 
@@ -154,8 +160,8 @@ impl MyShape {
         let vertices = {
             let mut vertices: Vec<Vertex> = Vec::new();
 
-            let div_a = 1000;
-            let div_b = 1000;
+            let div_a = 100;
+            let div_b = 100;
 
             let n = 3;
             let m = 4;

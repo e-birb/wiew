@@ -1,7 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/wiew", "crates/wiew-eframe",
+    "crates/wiew",
+    "crates/wiew-eframe",
+    "crates/wiew-eframe/examples/*",
 ]
 default-members = [
     "crates/wiew",

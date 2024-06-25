@@ -31,6 +31,10 @@ pub trait ProjectionCamera/*: Debug*/ {
         &mut self,
         delta: f32,
     );
+    fn mouse_zoom_r(
+        &mut self,
+        delta: f32,
+    );
     fn mouse_roll(
         &mut self,
         delta: f32,

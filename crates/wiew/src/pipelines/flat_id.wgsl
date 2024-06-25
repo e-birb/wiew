@@ -12,9 +12,9 @@ struct InstanceInput {
     @location(1) model_1: vec4<f32>,
     @location(2) model_2: vec4<f32>,
     @location(3) model_3: vec4<f32>,
-    @location(4) model_3: vec3<f32>,
-    @location(5) model_3: vec3<f32>,
-    @location(6) model_3: vec3<f32>,
+    //@location(4) model_3: vec3<f32>,
+    //@location(5) model_3: vec3<f32>,
+    //@location(6) model_3: vec3<f32>,
 };
 
 @vertex

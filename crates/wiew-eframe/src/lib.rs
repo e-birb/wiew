@@ -20,12 +20,12 @@ pub struct Eframe3dView {
 
 impl Eframe3dView {
     pub fn new(
-        render_state: &RenderState,
+        //render_state: &RenderState,
         scene: impl Scene3d,
     ) -> Self {
         let camera = Arc::new(Mutex::new(TrackballCamera::new()));
 
-        let eframe_view = EframeView::new(render_state, MyView3d::new(scene, camera.clone()));
+        let eframe_view = EframeView::new(MyView3d::new(scene, camera.clone()));
         Self {
             eframe_view,
             camera,
@@ -81,6 +81,11 @@ impl Eframe3dView {
                     camera.mouse_zoom(- dy as f32 / 200.0);
                     let dx = i.smooth_scroll_delta.x;
                     camera.mouse_roll(dx as f32 / 200.0);
+
+                    if let Some(m) = i.multi_touch() {
+                        let d = m.zoom_delta;
+                        camera.mouse_zoom_r(d); // TODO proper scaling
+                    }
                 }
             });
         }
@@ -96,7 +101,7 @@ pub struct EframeView {
 
 impl EframeView {
     pub fn new(
-        render_state: &RenderState,
+        //render_state: &RenderState,
         view: impl View,
     ) -> Self {
         Self {

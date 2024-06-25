@@ -36,6 +36,11 @@ impl ProjectionCamera for IdentityCamera {
         _delta: f32,
     ) {}
 
+    fn mouse_zoom_r(
+        &mut self,
+        _delta: f32,
+    ) {}
+
     fn mouse_roll(
         &mut self,
         _delta: f32,

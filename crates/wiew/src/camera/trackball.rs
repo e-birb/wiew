@@ -136,6 +136,14 @@ impl ProjectionCamera for TrackballCamera {
         self.distance = self.distance.clamp(self.znear / self.trackball_relative_radius, self.zfar);
     }
 
+    fn mouse_zoom_r(
+        &mut self,
+        delta: f32,
+    ) {
+        self.distance /= delta;
+        self.distance = self.distance.clamp(self.znear / self.trackball_relative_radius, self.zfar);
+    }
+
     fn mouse_roll(
         &mut self,
         delta: f32,

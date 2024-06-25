@@ -1,0 +1,33 @@
+[package]
+name = "web"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+console_error_panic_hook = "0.1.7"
+eframe = { version = "0.27.2", default-features = false, features = ["default_fonts", "wgpu"] }
+egui-wgpu = "0.27.2"
+log = "0.4.21"
+wgpu = { version = "=0.20.1", default-features = false, features = [
+  # Backends (see https://docs.rs/wgpu/latest/wgpu/#feature-flags)
+  "webgl",
+  "metal",
+  "webgpu",
+  #"vulkan", # Does not yet exist, wgpu enables this automatically on Linux & Windows.
+  #"gl",     # Does not yet exist, wgpu enables this automatically on Linux & Windows.
+  #"dx12",   # DX12 backend on wgpu isn't as stable. Also, we want to reduce the number of backends on native. Ideally we only have Vulkan & Metal, but we also keep GL as a manual fallback.
+  #"angle",  # As above, we want to limit the numbers of backends we support. GL support via angle isn't great and we didn't need it so far.
+  # Shader options:
+  "wgsl",
+  # Other:
+  "fragile-send-sync-non-atomic-wasm",
+] }
+wgpu-core = "=0.21.0"
+wiew-eframe = { version = "0.1.0", path = "../.." }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.92"
+# https://github.com/trunk-rs/trunk/blob/c160ed3ff7c98a94ab00f14acbbd198268a92525/examples/vanilla/Cargo.toml
+web-sys = { version = "0.3.69", features = ["console", "Document", "Element", "Event", "HtmlElement", "Node", "Window"] }
+wasm-bindgen-futures = "0.4"
