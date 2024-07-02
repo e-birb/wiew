@@ -308,6 +308,17 @@ impl EframeWiewManager {
         }
     }
 
+    pub fn init(cc: &eframe::CreationContext) {
+        let wgpu_render_state = cc.wgpu_render_state.as_ref().expect("no wgpu_render_state, did you set eframe::Renderer::Wgpu?");
+        let resources = EframeWiewManager::new(wgpu_render_state.target_format);
+
+        wgpu_render_state
+            .renderer
+            .write()
+            .callback_resources
+            .insert(resources);
+    }
+
     fn cleanup(&mut self) {
         // remove all refs that have no other refs
         self.render_textures.retain(|_, (weak, _)| weak.strong_count() > 0);
