@@ -296,7 +296,7 @@ impl EframeWiewResources {
 pub struct EframeWiewManager {
     render_textures: HashMap<usize, (std::sync::Weak<()>, EframeWiewResources)>,
     target_format: wgpu::TextureFormat,
-    resource_registry: Mutex<ResourceRegistry>,
+    pub resource_registry: Arc<Mutex<ResourceRegistry>>,
 }
 
 impl EframeWiewManager {
@@ -304,7 +304,7 @@ impl EframeWiewManager {
         Self {
             render_textures: HashMap::new(),
             target_format,
-            resource_registry: Mutex::new(ResourceRegistry::new()),
+            resource_registry: Arc::new(Mutex::new(ResourceRegistry::new())),
         }
     }
 
@@ -317,6 +317,10 @@ impl EframeWiewManager {
             .write()
             .callback_resources
             .insert(resources);
+    }
+
+    pub fn begin_frame(&mut self) {
+        self.resource_registry.lock().unwrap().clean();
     }
 
     fn cleanup(&mut self) {

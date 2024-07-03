@@ -19,7 +19,7 @@ pub struct RenderContext<'a> {
 
 impl<'a> RenderContext<'a> {
     pub fn resource<T: Send + Sync + 'static>(&mut self, res: &Resource<T>) -> Arc<T> {
-        self.resource_registry.by_id(res.id()).cloned().unwrap_or_else(|| {
+        self.resource_registry.by_id(res.id()).unwrap_or_else(|| {
             let r = res.builder().build(self); // TODO detect cycles
 
             self.resource_registry.insert(res.clone(), r)
@@ -27,7 +27,7 @@ impl<'a> RenderContext<'a> {
     }
 
     pub fn singleton<S: SingletonResource>(&mut self) -> Arc<S> {
-        self.resource_registry.get_singleton().cloned().unwrap_or_else(|| {
+        self.resource_registry.get_singleton().unwrap_or_else(|| {
             let s = S::init(self); // TODO detect cycles
 
             self.resource_registry.insert_singleton(s)
