@@ -293,6 +293,15 @@ impl EframeWiewResources {
     }
 }
 
+
+/// Manages the resources for the eframe views
+///
+/// # Remarks
+/// You have to call [`init`] during the initialization of the app
+/// and [`begin_frame`] at the beginning of [`App::update`](eframe::App::update)!
+///
+/// [`init`]: EframeWiewManager::init
+/// [`begin_frame`]: EframeWiewManager::begin_frame
 pub struct EframeWiewManager {
     render_textures: HashMap<usize, (std::sync::Weak<()>, EframeWiewResources)>,
     target_format: wgpu::TextureFormat,
@@ -300,7 +309,7 @@ pub struct EframeWiewManager {
 }
 
 impl EframeWiewManager {
-    pub fn new(target_format: TextureFormat) -> Self {
+    fn new(target_format: TextureFormat) -> Self {
         Self {
             render_textures: HashMap::new(),
             target_format,
@@ -319,8 +328,18 @@ impl EframeWiewManager {
             .insert(resources);
     }
 
-    pub fn begin_frame(&mut self) {
+    fn clean_resources(&mut self) {
         self.resource_registry.lock().unwrap().clean();
+    }
+
+    pub fn begin_frame(render_state: &eframe::egui_wgpu::RenderState) {
+        render_state
+            .renderer
+            .write()
+            .callback_resources
+            .get_mut::<EframeWiewManager>()
+            .expect("no manager")
+            .clean_resources();
     }
 
     fn cleanup(&mut self) {
