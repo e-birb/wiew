@@ -63,17 +63,7 @@ struct App {
 
 impl App {
     pub fn new<'a>(cc: &'a eframe::CreationContext<'a>) -> Option<Self> {
-        let wgpu_render_state = cc.wgpu_render_state.as_ref().expect("no wgpu_render_state, did you set eframe::Renderer::Wgpu?");
-        let resources = EframeWiewManager::new(wgpu_render_state.target_format);
-
-        // Because the graphics pipeline must have the same lifetime as the egui render pass,
-        // instead of storing the pipeline in our `Custom3D` struct, we insert it into the
-        // `paint_callback_resources` type map, which is stored alongside the render pass.
-        wgpu_render_state
-            .renderer
-            .write()
-            .callback_resources
-            .insert(resources);
+        EframeWiewManager::init(cc);
 
         let settings = Arc::new(Mutex::new(Settings {
             grid: true,

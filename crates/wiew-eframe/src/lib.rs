@@ -298,7 +298,8 @@ impl EframeWiewResources {
 ///
 /// # Remarks
 /// You have to call [`init`] during the initialization of the app
-/// and [`begin_frame`] at the beginning of [`App::update`](eframe::App::update)!
+/// and [`begin_frame`] at the beginning of [`App::update`](eframe::App::update)!  
+/// Failing to call [`init`] will result in a **panic** and failing to call [`begin_frame`] will result in **resource leaks**.
 ///
 /// [`init`]: EframeWiewManager::init
 /// [`begin_frame`]: EframeWiewManager::begin_frame
@@ -320,6 +321,8 @@ impl EframeWiewManager {
     pub fn init(cc: &eframe::CreationContext) {
         let wgpu_render_state = cc.wgpu_render_state.as_ref().expect("no wgpu_render_state, did you set eframe::Renderer::Wgpu?");
         let resources = EframeWiewManager::new(wgpu_render_state.target_format);
+
+        // TODO do nothing but log if already initialized... or maybe replace?
 
         wgpu_render_state
             .renderer
