@@ -1,4 +1,4 @@
-use std::{any::{Any, TypeId}, collections::HashMap, sync::{atomic::AtomicBool, Arc, Mutex}};
+use std::{any::{Any, TypeId}, collections::HashMap, ops::Deref, sync::{atomic::AtomicBool, Arc, Mutex}};
 
 //use type_map::TypeMap;
 
@@ -13,6 +13,7 @@ pub struct ResourceRegistry {
 
 struct ResourceHold {
     used: Arc<AtomicBool>,
+    type_name: &'static str,
     resource: Arc<dyn Any + Send + Sync>,
 }
 
@@ -53,20 +54,21 @@ impl ResourceRegistry {
 
     /// Insert and already created resource
     pub fn insert<T: 'static + Send + Sync>(&mut self, resource: Resource<T>, value: T) -> Arc<T> {
-        let value = Arc::new(value);
-
-        let type_id = value.type_id();
+        let type_id = TypeId::of::<T>();
         let type_name = std::any::type_name::<T>();
+
+        let value = Arc::new(value);
 
         let old = self.id_maps.insert(resource.id().clone(), ResourceHold {
             used: Arc::new(AtomicBool::new(true)), // if just created, it's already used
+            type_name,
             resource: value.clone(),
         });
 
         if let Some(old) = old {
             log::debug!("Resource with id {:?} already exists, replacing", resource.id());
-            if old.resource.type_id() != type_id {
-                log::error!("Resource with id {:?} (now {type_name}) already exists, but has different type ({{TODO}})", resource.id());
+            if old.resource.deref().type_id() != type_id {
+                log::error!("Resource with id {:?} (now {type_name}) already exists, but has different type ({})", resource.id(), old.type_name);
             }
         }
 
@@ -96,20 +98,24 @@ impl ResourceRegistry {
     }
 
     pub fn insert_singleton<S: SingletonResource>(&mut self, value: S) -> Arc<S> {
-        let value = Arc::new(value);
-
-        let type_id = value.type_id();
+        let type_id = TypeId::of::<S>();
         let type_name = std::any::type_name::<S>();
+
+        let value = Arc::new(value);
 
         let old = self.singletons.insert(type_id, ResourceHold {
             used: Arc::new(AtomicBool::new(true)), // if just created, it's already used
+            type_name,
             resource: value.clone(),
         });
 
         if let Some(old) = old {
             log::debug!("Singleton resource with type {type_name} already exists, replacing");
-            if old.resource.type_id() != type_id {
-                log::error!("Singleton resource with type {type_name} already exists, but has different type ({{TODO}})");
+
+            debug_assert_eq!(old.resource.deref().type_id(), type_id);
+
+            if old.resource.deref().type_id() != type_id {
+                log::error!("Singleton resource with type {type_name} already exists, but has different type ({})", old.type_name);
             }
         }
 
