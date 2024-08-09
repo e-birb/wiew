@@ -462,7 +462,7 @@ impl PresentationStuff {
                 module: &present_shader,
                 entry_point: "vs_main",
                 buffers: &[],
-                //compilation_options: Default::default(),
+                compilation_options: Default::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &present_shader,
@@ -474,7 +474,7 @@ impl PresentationStuff {
                     write_mask: wgpu::ColorWrites::ALL,
                     
                 })],
-                //compilation_options: Default::default(),
+                compilation_options: Default::default(),
             }),
             primitive,
             depth_stencil: None,

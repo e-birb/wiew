@@ -84,11 +84,13 @@ impl FlatPipeline {
                         Vertex::desc(),
                         Instance3d::desc(),
                     ],
+                    compilation_options: Default::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader.shader,
                     entry_point: "fs_main",
                     targets: &targets,
+                    compilation_options: Default::default(),
                 }),
                 primitive,
                 depth_stencil: formats.depth_format.map(|format| wgpu::DepthStencilState {
@@ -193,11 +195,13 @@ impl FlatIdentityPipeline {
                         Vertex::desc(),
                         Instance3d::desc(),
                     ],
+                    compilation_options: Default::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader.shader,
                     entry_point: "fs_main",
                     targets: &targets,
+                    compilation_options: Default::default(),
                 }),
                 primitive,
                 depth_stencil: formats.depth_format.map(|format| wgpu::DepthStencilState {
