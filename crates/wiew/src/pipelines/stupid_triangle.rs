@@ -72,6 +72,7 @@ impl Triangle {
             //}),
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
+            cache: None,
         });
 
         let uniform_buffer = cx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {

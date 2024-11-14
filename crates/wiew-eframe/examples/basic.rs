@@ -1,6 +1,7 @@
 
 //#![windows_subsystem = "windows"]
 
+use std::error::Error;
 use std::sync::{Arc, Mutex};
 
 use eframe::egui::{self, Color32, Layout};
@@ -23,7 +24,9 @@ fn main() {
     eframe::run_native(
         "wiew ❤️ eframe",
         options,
-        Box::new(|cc| Box::new(App::new(cc).unwrap())),
+        Box::new(|cc| -> Result<_, Box<dyn Error + Send + Sync>> {
+            Ok(App::new(cc).ok_or(anyhow::anyhow!("Failed to create app")).map(Box::new)?)
+        }),
     ).unwrap();
 }
 

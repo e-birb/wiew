@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-eframe = { version = "0.28.1", default-features = false, features = ["wgpu"] }
+eframe = { version = "0.29.1", default-features = true, features = ["wgpu"] }
 wiew = { version = "0.1.0", path = "../wiew" }
 
 [dev-dependencies]
-eframe = "*" # <- use default features for tests (for example "default_fonts" feature)
+anyhow = "1.0.93"
+
+# TODO see https://github.com/rust-windowing/winit/issues/3174#issuecomment-1775749581
+#eframe = "*" # <- use default features for tests (for example "default_fonts" feature)
+eframe = "0.29.1"

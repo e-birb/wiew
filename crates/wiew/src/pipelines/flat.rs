@@ -102,6 +102,7 @@ impl FlatPipeline {
                 }),
                 multisample: Default::default(),
                 multiview: None,
+                cache: None,
             })
         });
 
@@ -213,6 +214,7 @@ impl FlatIdentityPipeline {
                 }),
                 multisample: Default::default(),
                 multiview: None,
+                cache: None,
             })
         });
 

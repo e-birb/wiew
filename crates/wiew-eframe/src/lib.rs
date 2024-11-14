@@ -201,11 +201,11 @@ impl CallbackTrait for EframeWiewCallback {
         Vec::new()
     }
 
-    fn paint<'a>(
-        &'a self,
+    fn paint(
+        &self,
         _info: eframe::epaint::PaintCallbackInfo,
-        render_pass: &mut wgpu::RenderPass<'a>,
-        callback_resources: &'a eframe::egui_wgpu::CallbackResources,
+        render_pass: &mut wgpu::RenderPass,
+        callback_resources: &eframe::egui_wgpu::CallbackResources,
     ) {
         // TODO assert correct size
         // TODO use the clip rect
@@ -480,6 +480,7 @@ impl PresentationStuff {
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
+            cache: None,
         });
 
         Self {
