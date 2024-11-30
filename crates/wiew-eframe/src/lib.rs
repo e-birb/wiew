@@ -76,7 +76,7 @@ impl Eframe3dView {
             ui.input(|i| {
                 let on_rect = i.pointer.hover_pos().map(|p| rect.contains(p)).unwrap_or(false);
 
-                if on_rect {
+                if on_rect && r.hovered() {
                     let dy = i.smooth_scroll_delta.y;
                     camera.mouse_zoom(- dy as f32 / 200.0);
                     let dx = i.smooth_scroll_delta.x;
