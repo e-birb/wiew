@@ -1,7 +1,7 @@
 use cgmath::num_traits::Pow;
 use rotation3::*;
 
-use crate::{instance::Instance3d, pipelines::flat::{self, FlatPipeline}, Pass, RenderContext, Resource, VertexBuffer};
+use crate::{instance::Instance3d, pipelines::flat::{self, FlatPipeline}, Pass, RenderContext, Res, VertexBuffer};
 
 use self::movement::{MouseMovement, NewMouseMovement};
 
@@ -179,14 +179,14 @@ impl ProjectionCamera for TrackballCamera {
 
 //#[derive(Debug, Clone, Copy)]
 pub struct Trackball {
-    res: Resource<TrackballRes>,
+    res: Res<TrackballRes>,
 }
 
 impl Trackball {
     pub fn new(
     ) -> Self {
         Self {
-            res: Resource::new(|cx: &mut RenderContext| TrackballRes::new(cx)),
+            res: Res::new(|cx: &mut RenderContext| TrackballRes::new(cx)),
         }
     }
 }

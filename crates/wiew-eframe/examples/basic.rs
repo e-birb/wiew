@@ -8,8 +8,9 @@ use eframe::egui::{self, Color32, Layout};
 use eframe::wgpu::{CompareFunction, PrimitiveTopology};
 use wiew::instance::{Instance3d, Instance3dBuffer};
 use wiew::pipelines::flat::{self, FlatPipeline};
-use wiew::{Pass, Render, RenderContext, Resource, VertexBuffer};
-use wiew_eframe::{Eframe3dView, EframeWiewManager, Scene3d, Scene3dBackground};
+use wiew::provided::Scene3d;
+use wiew::{Pass, Render, RenderContext, Res, VertexBuffer};
+use wiew_eframe::{Eframe3dView, EframeWiewManager};
 use wiew::external::nalgebra;
 use wiew::external::rotation3::Rotation;
 
@@ -142,14 +143,14 @@ struct Settings {
 
 struct MyScene {
     settings: Arc<Mutex<Settings>>,
-    triangle: Resource<MyShape>,
+    triangle: Res<MyShape>,
 }
 
 impl MyScene {
     fn new(settings: Arc<Mutex<Settings>>) -> Self {
         Self {
             settings,
-            triangle: Resource::new(MyShape::new),
+            triangle: Res::new(MyShape::new),
         }
     }
 }
@@ -166,17 +167,6 @@ impl Scene3d for MyScene {
 
     fn grid(&self) -> bool {
         self.settings.lock().unwrap().grid
-    }
-
-    fn background_color(&self) -> wiew_eframe::Scene3dBackground {
-        let settings = self.settings.lock().unwrap();
-        let to_array = |c: Color32| [c.r() as f32 / 255.0, c.g() as f32 / 255.0, c.b() as f32 / 255.0, c.a() as f32 / 255.0];
-        Scene3dBackground {
-            top_left: to_array(settings.bg_top_left),
-            top_right: to_array(settings.bg_tot_right),
-            bottom_left: to_array(settings.bg_bottom_left),
-            bottom_right: to_array(settings.bg_bottom_right),
-        }
     }
 }
 

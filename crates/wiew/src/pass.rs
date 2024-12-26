@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use wgpu::{BindGroup, CommandEncoder, RenderPass};
 
 /// A pass that can be executed on a render surface.
@@ -18,7 +16,7 @@ pub struct Pass<'a> {
     surface_info: SurfaceInfo,
     pub globals: &'a wgpu::BindGroup,
     descriptor: Option<Box<dyn FnOnce(&'a mut CommandEncoder) -> RenderPass<'a> + 'a>>,
-    steps: Vec<(Box<dyn Any + Send + Sync>, Box<dyn for<'rp> Fn(&mut wgpu::RenderPass<'rp>, &'rp wgpu::BindGroup, &'rp dyn Any) + 'a>)>,
+    steps: Vec<Box<dyn for<'rp> Fn(&mut wgpu::RenderPass<'rp>, &'rp wgpu::BindGroup) + 'a>>,
 }
 
 impl<'a> Pass<'a> {
@@ -48,8 +46,8 @@ impl<'a> Pass<'a> {
     /// will not be executed.
     pub fn exec(mut self, encoder: &'a mut CommandEncoder) {
         let mut render_pass = (self.descriptor.take().unwrap())(encoder);
-        for (data, step) in &self.steps {
-            step(&mut render_pass, &self.globals, &**data);
+        for step in &self.steps {
+            step(&mut render_pass, &self.globals);
         }
     }
 
@@ -78,19 +76,15 @@ impl<'a> Pass<'a> {
     ///     },
     /// );
     /// ```
-    pub fn defer<Data: 'static + Send + Sync, F>(&mut self, data: Data, command: F)
+    pub fn defer<F>(&mut self, command: F)
     where
-        F: for<'rp> Fn(&mut wgpu::RenderPass<'rp>, &'rp BindGroup, &'rp Data) + 'static
+        F: Fn(&mut wgpu::RenderPass, &BindGroup) + 'static
     {
-        let data: Box<dyn Any + Send + Sync> = Box::new(data);
-
-        self.steps.push((
-            data,
-            Box::new(move |render_pass: &mut wgpu::RenderPass, globals: &wgpu::BindGroup, data: &dyn Any| {
-                let data = <dyn Any>::downcast_ref::<Data>(data as &dyn Any).unwrap();
-                command(render_pass, globals, data);
+        self.steps.push(
+            Box::new(move |render_pass: &mut wgpu::RenderPass, globals: &wgpu::BindGroup| {
+                command(render_pass, globals);
             }),
-        ));
+        );
     }
 }
 

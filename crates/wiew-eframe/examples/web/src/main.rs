@@ -8,7 +8,7 @@ use wiew_eframe::wiew::external::wgpu;
 use wiew_eframe::wiew::external::nalgebra::Vector3;
 use wiew_eframe::wiew::external::rotation3::Rotation;
 use wiew_eframe::wiew::instance::Instance3d;
-use wiew_eframe::wiew::{Pass, Render, Resource};
+use wiew_eframe::wiew::{Pass, Render, Res};
 use wiew_eframe::wiew::{instance::Instance3dBuffer, pipelines::flat::FlatPipeline, RenderContext, VertexBuffer};
 use wiew_eframe::wiew::pipelines::flat;
 use wiew_eframe::{Eframe3dView, EframeWiewManager, Scene3d, Scene3dBackground};
@@ -122,14 +122,14 @@ struct Settings {
 
 struct MyScene {
     settings: Arc<Mutex<Settings>>,
-    triangle: Resource<MyShape>,
+    triangle: Res<MyShape>,
 }
 
 impl MyScene {
     fn new(settings: Arc<Mutex<Settings>>) -> Self {
         Self {
             settings,
-            triangle: Resource::new(MyShape::new),
+            triangle: Res::new(MyShape::new),
         }
     }
 }

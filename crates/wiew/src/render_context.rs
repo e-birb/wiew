@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{Resource, ResourceRegistry, SingletonResource};
+use crate::{Res, ResourceRegistry, SingletonResource};
 
 
 
@@ -9,7 +9,7 @@ pub struct RenderContext<'a> {
     pub encoder: &'a mut wgpu::CommandEncoder,
     pub queue: &'a wgpu::Queue,
     pub target: &'a wgpu::TextureView,
-    pub presentation_target_format: &'a wgpu::TextureFormat,
+    pub target_format: &'a wgpu::TextureFormat,
     //pub target_formats: &'a [wgpu::TextureFormat],
     //pub depth_formats: &'a [wgpu::TextureFormat],
     pub resource_registry: &'a mut ResourceRegistry,
@@ -18,7 +18,7 @@ pub struct RenderContext<'a> {
 }
 
 impl<'a> RenderContext<'a> {
-    pub fn resource<T: Send + Sync + 'static>(&mut self, res: &Resource<T>) -> Arc<T> {
+    pub fn resource<T: Send + Sync + 'static>(&mut self, res: &Res<T>) -> Arc<T> {
         self.resource_registry.by_id(res.id()).unwrap_or_else(|| {
             let r = res.builder().build(self); // TODO detect cycles
 

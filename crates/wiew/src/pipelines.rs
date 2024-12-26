@@ -2,7 +2,7 @@
 use std::{collections::HashMap, sync::{Arc, Mutex}};
 
 
-use crate::{Pass, RenderContext, Resource};
+use crate::{Pass, RenderContext, Res};
 
 
 pub mod stupid_triangle;
@@ -15,12 +15,12 @@ pub struct SurfaceFormats {
 
 pub struct Pipeline {
     builder: Arc<dyn Fn(&mut RenderContext, &SurfaceFormats) -> wgpu::RenderPipeline + Send + Sync>,
-    res: Arc<Mutex<Res>>,
+    res: Arc<Mutex<Resources>>,
 }
 
-struct Res {
+struct Resources {
     target_formats: Vec<wgpu::TextureFormat>,
-    pipelines: HashMap<Option<wgpu::TextureFormat>, Resource<wgpu::RenderPipeline>>,
+    pipelines: HashMap<Option<wgpu::TextureFormat>, Res<wgpu::RenderPipeline>>,
 }
 
 impl Pipeline {
@@ -30,7 +30,7 @@ impl Pipeline {
     {
         let builder = Arc::new(builder);
 
-        let res = Arc::new(Mutex::new(Res {
+        let res = Arc::new(Mutex::new(Resources {
             target_formats: Vec::new(),
             pipelines: HashMap::new(),
         }));
@@ -56,7 +56,7 @@ impl Pipeline {
             let mut target_formats = res.target_formats.clone();
             target_formats.push(*format);
 
-            *res = Res {
+            *res = Resources {
                 target_formats: target_formats.clone(),
                 pipelines: HashMap::new(),
             };
@@ -72,7 +72,7 @@ impl Pipeline {
     
                 let builder = self.builder.clone();
     
-                let pipeline = Resource::new(move |cx: &mut RenderContext| builder(cx, &formats));
+                let pipeline = Res::new(move |cx: &mut RenderContext| builder(cx, &formats));
 
                 res.pipelines.insert(depth_format.clone(), pipeline.clone());
 

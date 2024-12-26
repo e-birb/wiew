@@ -1,8 +1,6 @@
-use std::{any::{Any, TypeId}, collections::HashMap, ops::Deref, sync::{atomic::AtomicBool, Arc, Mutex}};
+use std::{any::{Any, TypeId}, collections::HashMap, ops::Deref, sync::{atomic::AtomicBool, Arc}};
 
 //use type_map::TypeMap;
-
-use type_map::concurrent::TypeMap;
 
 use crate::{RenderContext, ResId};
 
@@ -12,7 +10,7 @@ pub struct ResourceRegistry {
 }
 
 struct ResourceHold {
-    used: Arc<AtomicBool>,
+    used: AtomicBool,
     type_name: &'static str,
     resource: Arc<dyn Any + Send + Sync>,
 }
@@ -53,14 +51,14 @@ impl ResourceRegistry {
     }
 
     /// Insert and already created resource
-    pub fn insert<T: 'static + Send + Sync>(&mut self, resource: Resource<T>, value: T) -> Arc<T> {
+    pub fn insert<T: 'static + Send + Sync>(&mut self, resource: Res<T>, value: T) -> Arc<T> {
         let type_id = TypeId::of::<T>();
         let type_name = std::any::type_name::<T>();
 
         let value = Arc::new(value);
 
         let old = self.id_maps.insert(resource.id().clone(), ResourceHold {
-            used: Arc::new(AtomicBool::new(true)), // if just created, it's already used
+            used: AtomicBool::new(true), // if just created, it's already used
             type_name,
             resource: value.clone(),
         });
@@ -104,7 +102,7 @@ impl ResourceRegistry {
         let value = Arc::new(value);
 
         let old = self.singletons.insert(type_id, ResourceHold {
-            used: Arc::new(AtomicBool::new(true)), // if just created, it's already used
+            used: AtomicBool::new(true), // if just created, it's already used
             type_name,
             resource: value.clone(),
         });
@@ -125,9 +123,9 @@ impl ResourceRegistry {
     // TODO a method that combines get_singleton and insert_singleton!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 }
 
-pub struct Resource<T>(Arc<ResourceInner<T>>);
+pub struct Res<T>(Arc<ResourceInner<T>>);
 
-impl<T> Clone for Resource<T> {
+impl<T> Clone for Res<T> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
@@ -138,7 +136,7 @@ struct ResourceInner<T> { // TODO maybe remove this struct
     builder: Box<dyn ResourceBuilder<Resource = T> + Send + Sync>, // TODO maybe allow some way to load async resources
 }
 
-impl<T> Resource<T> {
+impl<T> Res<T> {
     pub fn new(builder: impl ResourceBuilder<Resource = T> + 'static + Send + Sync) -> Self {
         Self(Arc::new(ResourceInner {
             id: ResId::new(),

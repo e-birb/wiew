@@ -16,7 +16,7 @@ mod vertex_buffer;
 mod id;
 mod render;
 mod camera;
-
+pub mod provided;
 
 pub use pass::*;
 pub use pipelines::Pipeline;
